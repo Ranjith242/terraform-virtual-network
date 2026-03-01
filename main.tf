@@ -1,28 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-  
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
-    }
-  }
-
-  backend "azurerm" {
-    resource_group_name  = "rg-storage"
-    storage_account_name = "rp233424323"
-    container_name       = "docker-terraform-state"
-    # key will be provided during init via -backend-config="key=${subscription}_${resource}.tfstate"
-    use_msi              = true
-  }
-}
-
-provider "azurerm" {
-  features {}
-  subscription_id = var.target_subscription_id
-  use_msi         = true
-}
-
 resource "azurerm_virtual_network" "virtual_network" {
   for_each                = var.virtual_network_variables
   name                    = each.value.virtual_network_name
