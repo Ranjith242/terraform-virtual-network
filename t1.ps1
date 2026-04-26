@@ -1,0 +1,1 @@
+.\Deploy-FinOpsLab.ps1 -SubscriptionId "" -Location "eastus" -ProdResourceGroupName "rg-finops-prod" -NonProdResourceGroupName "rg-finops-nonprod" -AdminUsername "azureuser" -AdminPassword $pwd   -DeployLoadBalancer
