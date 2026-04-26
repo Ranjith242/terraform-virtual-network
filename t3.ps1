@@ -20,6 +20,16 @@
 
 .PARAMETER DeployLoadBalancer
     Switch to also deploy the optional internal load balancers.
+
+.EXAMPLE
+    $pwd = ConvertTo-SecureString "P@ssw0rd1234!" -AsPlainText -Force
+    .\Deploy-FinOpsLab.ps1 `
+        -SubscriptionId           "<sub-id>" `
+        -Location                 "eastus" `
+        -ProdResourceGroupName    "rg-finops-prod" `
+        -NonProdResourceGroupName "rg-finops-nonprod" `
+        -AdminUsername "azureuser" -AdminPassword $pwd `
+        -DeployLoadBalancer
 #>
 
 [CmdletBinding()]
@@ -43,7 +53,7 @@ Select-AzSubscription -SubscriptionId $SubscriptionId | Out-Null
 function Get-EnvSuffix {
     param([string]$RgName)
     $s = $RgName.ToLower()
-    if ($s.StartsWith('rg-')) { $s = $s.Substring(3) }
+    if ($s.StartsWith('rg-')) { $s = $s.Substring(3) }   # rg-finops-prod -> finops-prod
     return $s
 }
 
@@ -52,7 +62,7 @@ function Get-AlphaNum {
     return ($Value.ToLower() -replace '[^a-z0-9]', '')
 }
 
-# ---------- Definition table ----------
+# ---------- Definition table (derived from user-supplied RG names) ----------
 $envs = @(
     @{
         Tag          = 'prod'
@@ -74,7 +84,7 @@ $envs = @(
     }
 )
 
-# Random suffix for globally-unique names (storage, web app)
+# Random suffix for globally-unique names (storage)
 $rand = -join ((97..122) + (48..57) | Get-Random -Count 5 | ForEach-Object {[char]$_})
 
 $cred = New-Object System.Management.Automation.PSCredential ($AdminUsername, $AdminPassword)
@@ -135,19 +145,6 @@ foreach ($e in $envs) {
     Write-Host "  Creating Storage Account $saName ..." -ForegroundColor Cyan
     New-AzStorageAccount -ResourceGroupName $rg -Name $saName -Location $Location `
         -SkuName Standard_LRS -Kind StorageV2 -MinimumTlsVersion TLS1_2 | Out-Null
-
-    # ---------- App Service Plan (Free F1, Linux container) + Web App for Containers ----------
-    $planName = "asp-$suffix"
-    $webName  = "app-$suffix-$rand"
-    $image    = 'nginx:latest'   # public Docker Hub image; change as needed
-
-    Write-Host "  Creating Linux App Service Plan $planName (Free F1) ..." -ForegroundColor Cyan
-    New-AzAppServicePlan -ResourceGroupName $rg -Name $planName -Location $Location `
-        -Tier Free -NumberofWorkers 1 -WorkerSize Small -Linux | Out-Null
-
-    Write-Host "  Creating Web App for Containers $webName (image: $image) ..." -ForegroundColor Cyan
-    New-AzWebApp -ResourceGroupName $rg -Name $webName -Location $Location `
-        -AppServicePlan $planName -ContainerImageName $image | Out-Null
 
     # ---------- Public IP ----------
     $pipName = "pip-$suffix"
